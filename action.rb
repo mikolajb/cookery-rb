@@ -1,4 +1,3 @@
-
 class CookeryAction
   def initialize(name, &procedure)
     @name = name

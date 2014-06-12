@@ -9,12 +9,15 @@ class FileProtocol < CookeryProtocol
   def initialize(name, arguments, &block)
     @name = /#{name}/
     @arguments = arguments
-    instance_eval(&block)
+    @block = block
   end
 
   def path(path)
-    puts "path: #{path}"
     @path = path
+  end
+
+  def args(*arguments)
+    instance_exec(*arguments, &@block)
   end
 
   def get
