@@ -1,5 +1,6 @@
 recipy = """
 Crack eggs into a measuring cup.
+Boil potatos for 30 minutes.
 Add the milk (optional) and salt.
 Beat the mixture until foamy using fork.
 Melt 2 tsp. butter in a frying pan on medium heat
@@ -12,11 +13,12 @@ Season with black pepper (black pepper will burn and become  bitter if seasoned 
 
 Actions = Hash.new { |h, k| h[k] = Hash.new }
 Condition_types = {:place => [:into, :to],
-                   :condition => [:until]}
+                   :condition => [:until],
+                   :time => [:for]}
 Conditions = Hash.new { |h, k| h[k] = Array.new }
 
-def condition(type, name, &procedure)
-  Conditions[type] << name.to_s.tr('_', ' ')
+def condition(type, regex, &procedure)
+  Conditions[type] << regex
 end
 
 def action(action_name, subject, &procedure)
@@ -31,11 +33,14 @@ action(:crack, :eggs) do
 end
 action(:mix, "something") do
 end
-
-condition(:place, :measuring_cup) do
+action(:boil, :potatos) do
 end
 
-condition(:condition, :foamy) do
+condition(:place, /measuring cup/i) do
+end
+condition(:condition, /foamy/i) do
+end
+condition(:time, /([0-9]+) minutes/i) do
 end
 
 articles = ["a", "an", "the"].map { |i| i + ' ' }
@@ -49,8 +54,7 @@ end
 regex = /(?<action>#{Actions.keys.join("|")}) (?<subject>\w+)(?<conditions> .+)\./i
 p regex
 
-# condition_regex = Regexp.new(Condition_types.map { |type, pronouns| pronouns.map { |pronoun| "(?:(#{pronoun}) (?:#{articles.join('|')})?(#{Conditions[type]}))" }.join("|") }.join("|"))
-cond_regexs = Condition_types.map { |type, pronouns| pronouns.map { |pronoun| /(#{pronoun}) (?:#{articles.join('|')})?(#{Conditions[type].join("|")})/i }}.flatten
+cond_regexs = Condition_types.map { |type, pronouns| pronouns.map { |pronoun| /#{pronoun} (?:#{articles.join('|')})?#{Regexp.union(*Conditions[type])}/i }}.flatten
 p cond_regexs
 
 recipy.split("\n").each do |line|
