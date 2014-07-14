@@ -14,6 +14,8 @@ Cookery is inspired by cooking recipes and it allows to develop scientific appli
 
 __Action__ is a pair: __name__ and _procedure_. Name_ is a reference to created action and can be used in a place of `action` (see syntax). _Procedure_ is a block of code that takes one argument - _subject_. During the execution, _action_ receives a reference to a _subject_ specified be a user.
 
+Communication between _actions_ is done using _channels_. They can be accessed using function `channel_put(<channel_name>, <value>)` and `channel_get(<channel_name>)` (available in action's blocks).
+
 ### Condition
 
 __Condition__ is very similar to _action_. It has a __name__ and __procedure__. They should have longer, descriptive names and be designed in a way that can cooperate with many actions.
@@ -33,15 +35,15 @@ These components define named entities - keywords that can be used in a followin
 
     Action subject (context) - condition condition ... condition.
 
-Then, during the execution, framework passes subject with arguments specified by a user `(context)` and references to conditions.
+Then, during the execution, framework passes subject with arguments specified by a user (`(context)`) and references to conditions.
 
 ## Example
 
-In a following example we set up environment
+In a following example we show an application that counts words in a compressed text file. (file file-operations.rb in a repository).
 
 ### Setting up environment
 
-First, a subject:
+First, all the required components have to be defined, a subject:
 
     subject(:file, /(.+)/, :file) do |f|
       path f
@@ -85,7 +87,7 @@ Action `count_words` counts word in string.
 
 ### Application
 
-Complete application
+In a following code we use available components from a previous paragraph to construct a full application.
 
     Read file /tmp/test_data.gzip - with zip compression, with nothing.
     Count words.
