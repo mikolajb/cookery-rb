@@ -1,7 +1,9 @@
+require 'colors'
+
 def cookery(text)
   actions = Actions.keys.map { |a| Regexp.new(a.to_s.sub('_', ' '))}
 
-  p regex = /(?<action>#{Regexp.union(*actions)}) ?(?<subject>#{Regexp.union(*Subjects.keys)})? ?(?<arguments>#{Regexp.union(*Subjects.values.map(&:arguments))})?/i
+  p regex = /(?<action>#{Regexp.union(*actions)}) ?(?<subject>#{Regexp.union(*Subjects.keys.map(&:to_s))})? ?(?<arguments>#{Regexp.union(*Subjects.values.map(&:arguments))})?/i
 
   p cond_regex = /(?:with )?(?<condition>#{Regexp.union(*Conditions.keys)})/
 
@@ -16,15 +18,15 @@ def cookery(text)
     puts "- " * 20
     line.downcase!
 
+    variable = nil
+    variable, activity, conditions = line.split(/[:-]/).map(&:strip) if /^\w+:/ =~ line
     activity, conditions = line.split('-').map(&:strip)
-    puts "activity: #{activity}"
-    puts "conditions: #{conditions}"
-    puts
+    puts "parsed: |#{variable}| |#{activity}| |#{conditions}|".hl(:lightblue)
 
     if match = regex.match(activity)
-      puts "action: #{match[:action]}"
-      puts "subject: #{match[:subject]}"
-      puts "arguments: #{match[:arguments]}"
+      puts "detect action: #{match[:action]}".hl(:lightblue)
+      puts "detect subject: #{match[:subject]}".hl(:lightblue)
+      puts "detect arguments: #{match[:arguments]}".hl(:lightblue)
 
       action_name = match[:action].sub(' ', '_').to_sym
 
@@ -35,10 +37,14 @@ def cookery(text)
 
       if match[:subject]
         Subjects[match[:subject].to_sym].args(match[:arguments])
-        Actions[action_name].act(subject: Subjects[match[:subject].to_sym],
-                                 conditions: condition_names.map { |cn| Conditions[cn] })
+        res = Actions[action_name].act(subject: Subjects[match[:subject].to_sym],
+                                       conditions: condition_names.map { |cn|
+                                         Conditions[cn]},
+                                       last_result: last_result_get)
+        last_result_set(res)
+        set_variable(variable, res) if variable
       else
-        Actions[action_name].act
+        Actions[action_name].act(last_result: last_result_get)
       end
     end
   end

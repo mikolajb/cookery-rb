@@ -1,10 +1,16 @@
 require 'active_support/all'
+require 'rest_client'
 
 class CookeryProtocol
-end
-
-class FileProtocol < CookeryProtocol
   attr_accessor :name, :arguments
+
+  def self.direction(dir)
+    class_variable_set(:@@direction, dir)
+  end
+
+  def direction
+    self.class.class_variable_get(:@@direction)
+  end
 
   def initialize(name, arguments, &block)
     @name = /#{name}/
@@ -12,12 +18,20 @@ class FileProtocol < CookeryProtocol
     @block = block
   end
 
-  def path(path)
-    @path = path
+  def to_s
+    @name.to_s
   end
 
-  def args(*arguments)
-    instance_exec(*arguments, &@block)
+  def args(arguments)
+    instance_exec(*@arguments.match(arguments).captures, &@block)
+  end
+end
+
+class FileProtocol < CookeryProtocol
+  direction :in
+
+  def path(path)
+    @path = path
   end
 
   def get
@@ -25,13 +39,32 @@ class FileProtocol < CookeryProtocol
   end
 end
 
+class HttpProtocol < CookeryProtocol
+  direction :out
+
+  def url(url)
+    puts "setting url #{url}".hl(:purple)
+    @url = url
+  end
+
+  def put(parameters)
+    RestClient.put @url, parameters
+  end
+
+  def test
+    puts "test ok".hl(:green)
+  end
+end
+
 Subjects = Hash.new
 
 def subject(name, arguments, protocol, &block)
+  puts "defining subject #{name}, #{arguments}, #{protocol}".hl(:lightblue)
+
   protocol_class = "#{protocol.capitalize}Protocol".safe_constantize
 
   if protocol_class.nil?
-    warn "no such protocol: #{protocol}"
+    warn "no such protocol: #{protocol}".hl(:red)
   elsif protocol_class.superclass == CookeryProtocol
     Subjects[name] = protocol_class.new(name, arguments, &block)
   end

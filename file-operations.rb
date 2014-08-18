@@ -10,13 +10,10 @@ subject(:file, /(.+)/, :file) do |f|
 end
 
 action(:read) do |subject|
-  puts "in action"
-
   channel_put(:foo, subject)
 end
 
 condition("with zip compression") do |data|
-  puts "in condition"
   gz = Zlib::GzipReader.new(StringIO.new(data))
   result = gz.read
   gz.close

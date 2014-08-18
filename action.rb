@@ -4,16 +4,45 @@ class CookeryAction
     @procedure = procedure
   end
 
-  def act(subject: nil, conditions: [])
+  def act(subject: nil, conditions: [], last_result: nil)
     if subject.nil?
-      instance_eval(&@procedure)
-    else
-      data = subject.get
-      conditions.each do |c|
-        data = c.call(data)
+      puts "in action #{@name}".hl(:lightblue)
+      if !last_result.nil?
+        puts "in action #{@name} with last result #{last_result}".hl(:lightblue)
       end
-      instance_exec(data, &@procedure)
+    else
+      if last_result.nil?
+        puts "in action #{@name} with subject #{subject}".hl(:lightblue)
+      else
+        puts "in action #{@name} with subject #{subject} and last result #{last_result}".hl(:lightblue)
+      end
     end
+
+    res = nil
+
+    if subject.nil?
+      res = instance_exec(last_result, &@procedure)
+    else
+      puts "acting on subject #{subject} of type #{subject.direction}".hl(:lightblue)
+      # hack to keep backwords compatible
+
+      if subject.direction == :out
+        conditions.each do |c|
+          c.call(subject)
+        end
+
+        res = instance_exec(subject, last_result, &@procedure)
+      else
+        data = subject.get
+        conditions.each do |c|
+          data = c.call(data)
+        end
+
+        res = instance_exec(data, last_result, &@procedure)
+      end
+    end
+
+    res
   end
 end
 
