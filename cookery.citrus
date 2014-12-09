@@ -1,0 +1,38 @@
+grammar Cookery
+  rule activity
+    (variable ':' space+)? action (subject arguments?)? condition_group? END
+  end
+
+  rule variable
+    /[[:upper:]][[:alnum:]]*/
+  end
+
+  rule action
+    /[[:lower:]]+/ {
+    puts "action #{to_str}"
+    to_str
+    }
+  end
+
+  rule subject
+    space+ /[[:upper:]][[:alnum:]]*/
+  end
+
+  rule condition
+    /[[:alnum:]]+/ {
+    puts "condition #{to_str}"
+    to_str
+    }
+  end
+
+  rule condition_group
+    space+ 'with' space+ condition
+  end
+
+  rule arguments
+    (space+ /([[:alnum:]]|[[:punct:]])+/) &(condition_group | END)
+  end
+
+  rule space  [ \t\n\r]  end
+  rule END '.' end
+end
