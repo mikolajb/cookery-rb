@@ -1,38 +1,54 @@
 grammar Cookery
   rule activity
-    (variable ':' space+)? action (subject arguments?)? condition_group? END
+    (variable variable_separator)?
+    space* action_group
+    (space* subject_group)?
+    (space* condition_group)? END
   end
 
   rule variable
     /[[:upper:]][[:alnum:]]*/
   end
 
+  rule action_group
+    action (space+ action_arguments)?
+  end
+
   rule action
-    /[[:lower:]]+/ {
-    puts "action #{to_str}"
-    to_str
-    }
+    /[[:lower:]]+/
+  end
+
+  rule action_arguments
+    ~((space* /[[:upper:]]/) | (space* 'with') | END)
+  end
+
+  rule subject_group
+    subject (space+ subject_arguments)?
+    (space+ AND space+ subject (space+ subject_arguments)?)*
   end
 
   rule subject
-    space+ /[[:upper:]][[:alnum:]]*/
+    /[[:upper:]][[:alnum:]]*/
   end
 
-  rule condition
-    /[[:alnum:]]+/ {
-    puts "condition #{to_str}"
-    to_str
-    }
+  rule subject_arguments
+    ~((space* 'with') | (space* AND) | END)
   end
 
   rule condition_group
-    space+ 'with' space+ condition
+    'with' space+ condition (space+ condition_arguments)?
   end
 
-  rule arguments
-    (space+ /([[:alnum:]]|[[:punct:]])+/) &(condition_group | END)
+  rule condition
+    /[[:alnum:]]+/
   end
 
-  rule space  [ \t\n\r]  end
-  rule END '.' end
+  rule condition_arguments
+    ~END
+  end
+
+  rule space /[[:space:]]/ end
+  rule END space* '.' /\z/ end
+  rule AND 'and' end
+  rule variable_separator ':' end
 end
