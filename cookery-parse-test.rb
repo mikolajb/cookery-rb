@@ -57,7 +57,16 @@ texts = {"Test: read File." => {
            action_arguments: "very slowly",
            condition: "something",
            condition_arguments: "else like this ftp://test.txt"
-         }
+         },
+         "T[]: read File /tmp/test.txt." => {
+           action: "read",
+           list_variable: "T[]",
+           subject: "File",
+           subject_arguments: "/tmp/test.txt"},
+         "A[]: read T[]." => {
+           action: "read",
+           list_variable: "A[]",
+           list_variable_body: "T[]"},
         }
 
 counter = 0
@@ -67,24 +76,28 @@ texts.each do |t, p|
     c = Cookery.parse t
 
     checked = 0
-    [:variable].each do |elem|
+    [:variable, :list_variable].each do |elem|
       message += "#{elem}" + "_" * (31 - elem.length) +
                  (c.captures.include?(elem) ?
-                    c.captures[elem].join(", ").green : "") + "\n"
+                    c.captures[elem].map(&:inspect).join(", ").green : "") + "\n"
       if c.captures.include?(elem)
         checked += 1 if p[elem] == c.captures[elem].join(", ")
       end
     end
 
     {action_group: [:action, :action_arguments],
-     subject_group: [:subject, :subject_arguments],
+     subject_group: [:subject, :subject_arguments, :list_variable],
      condition_group: [:condition, :condition_arguments]}.each do |elem, names|
       names.each do |name|
         message += "#{name}" + "_" * (31 - name.length) +
              (c.captures.include?(elem) ?
                 c.capture(elem)[name].map(&:inspect).join(", ").green : "") + "\n"
         if c.captures.include?(elem)
-          checked += 1 if p[name] == c.capture(elem)[name].join(", ")
+          if name == :list_variable
+            checked += 1 if p[:list_variable_body] == c.capture(elem)[name].join(", ")
+          else
+            checked += 1 if p[name] == c.capture(elem)[name].join(", ")
+          end
         end
       end
     end

@@ -1,6 +1,6 @@
 grammar Cookery
   rule activity
-    (variable variable_separator)?
+    ((list_variable | variable) variable_separator)?
     space* action_group
     (space* subject_group)?
     (space* condition_group)? END
@@ -8,6 +8,10 @@ grammar Cookery
 
   rule variable
     /[[:upper:]][[:alnum:]]*/
+  end
+
+  rule list_variable
+    /[[:upper:]][[:alnum:]]*/ '[]'
   end
 
   rule action_group
@@ -23,8 +27,8 @@ grammar Cookery
   end
 
   rule subject_group
-    subject (space+ subject_arguments)?
-    (space+ AND space+ subject (space+ subject_arguments)?)*
+    list_variable | (subject (space+ subject_arguments)?)
+    (space+ AND space+ (list_variable | subject (space+ subject_arguments)?))*
   end
 
   rule subject
