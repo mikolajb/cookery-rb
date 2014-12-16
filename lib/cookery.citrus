@@ -1,0 +1,86 @@
+grammar Cookery
+  rule file
+    (space* activity space*)+ {
+    if captures[:activity].size > 1
+      's(' + captures[:activity].map {|a| a.value }.join(', ') + ')'
+    else
+      capture(:activity).value
+    end
+    }
+  end
+
+  rule activity
+    ((var:(list_variable | variable) variable_separator)?
+    space* action_group
+    (space* subject_group)?
+    (space* condition_group)? END) <Activity>
+  end
+
+  rule variable
+    /[[:upper:]][[:alnum:]]*/ { "s(:variable, " + to_str + ")" }
+  end
+
+  rule list_variable
+    (/[[:upper:]][[:alnum:]]*/ '[]') { "s(:list_variable, " + to_str + ")" }
+  end
+
+  rule action_group
+    (action (space+ action_arguments)?) {
+    if capture(:action_arguments)
+    "s(:action, " + capture(:action).value + ", " +
+    capture(:action_arguments).value + ")"
+    else
+    "s(:action, " + capture(:action).value + ")"
+    end
+    }
+  end
+
+  rule action
+    /[[:lower:]]+/
+  end
+
+  rule action_arguments
+    ~((space* /[[:upper:]]/) | (space* 'with') | END)
+    { "s(:action_arguments, " + to_str + ")" }
+  end
+
+  rule subject_group
+    ((list_variable) | (subject (space+ subject_arguments)?)
+    (space+ AND space+ subject_group)*)
+  end
+
+  rule subject
+    /[[:upper:]][[:alnum:]]*/
+    <Subject>
+  end
+
+  rule subject_arguments
+    ~((space* 'with') | (space* AND) | END) {
+    "s(:subject_arguments, " + to_str + ")" }
+  end
+
+  rule condition_group
+    ('with' space+ condition (space+ condition_arguments)?) {
+    if capture(:condition_arguments)
+    "s(:condition, " + capture(:condition) + ", " +
+    capture(:condition_arguments).value + ")"
+    else
+    "s(:condition, " + capture(:condition) + ")"
+    end
+    }
+  end
+
+  rule condition
+    /[[:alnum:]]+/
+  end
+
+  rule condition_arguments
+    ~END { "c(:condition_arguments, " + to_str + ")"}
+  end
+
+  rule comment /\#.*/ end
+  rule space /[[:space:]]/ | comment end
+  rule END /[[:space]]*\.(\z|[[:space:]])/ end
+  rule AND 'and' end
+  rule variable_separator ':' end
+end

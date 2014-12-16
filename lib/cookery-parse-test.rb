@@ -1,9 +1,8 @@
-require 'citrus'
-require 'colored'
+$:.unshift File.dirname(__FILE__)
+$:.unshift "/home/mikolaj/praca/behavioral/citrus-testing/citrus/lib"
+require 'cookery'
 
-Citrus.load 'cookery'
-
-texts = eval(File.open('test-cases.rb').read)
+texts = eval(File.open(File.join(File.dirname(__FILE__), 'test-cases.rb')).read)
 
 counter = 0
 texts.each do |t, p|
