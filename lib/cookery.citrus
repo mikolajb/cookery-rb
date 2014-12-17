@@ -12,7 +12,7 @@ grammar Cookery
   rule activity
     ((var:(list_variable | variable) variable_separator)?
     space* action_group
-    (space* subject_group)?
+    (space* subject_or_variable)?
     (space* condition_group)? END) <Activity>
   end
 
@@ -41,22 +41,29 @@ grammar Cookery
 
   rule action_arguments
     ~((space* /[[:upper:]]/) | (space* 'with') | END)
-    { "s(:action_arguments, " + to_str + ")" }
+    { "s(:action_arguments, \"" + to_str + "\")" }
+  end
+
+  rule subject_or_variable
+    ((list_variable | subject_group)
+    (space+ AND space+ subject_or_variable)*) <SubjectOrVariable>
   end
 
   rule subject_group
-    ((list_variable) | (subject (space+ subject_arguments)?)
-    (space+ AND space+ subject_group)*)
+    (subject (space+ subject_arguments)?) {
+    "s(:subject, " + capture(:subject).value +
+      (capture(:subject_arguments) ?
+         (", " + capture(:subject_arguments).value) : "") + ")"
+    }
   end
 
   rule subject
     /[[:upper:]][[:alnum:]]*/
-    <Subject>
   end
 
   rule subject_arguments
     ~((space* 'with') | (space* AND) | END) {
-    "s(:subject_arguments, " + to_str + ")" }
+    "s(:subject_arguments, \"" + to_str + "\")" }
   end
 
   rule condition_group
@@ -75,12 +82,12 @@ grammar Cookery
   end
 
   rule condition_arguments
-    ~END { "c(:condition_arguments, " + to_str + ")"}
+    ~END { "c(:condition_arguments, \"" + to_str + "\")"}
   end
 
   rule comment /\#.*/ end
-  rule space /[[:space:]]/ | comment end
-  rule END /[[:space]]*\.(\z|[[:space:]])/ end
+  rule space /[ \t\n\r]/ | comment end
+  rule END /[ \t\n\r]*\.(\z|[ \t\n\r])/ end
   rule AND 'and' end
-  rule variable_separator ':' end
+  rule variable_separator space* '=' end
 end

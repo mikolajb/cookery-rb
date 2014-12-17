@@ -7,23 +7,27 @@ module Activity
   def value
     "s(:activity, " +
       [
-        (capture(:var) ? capture(:var).value : nil),
-        (capture(:action_group) ? capture(:action_group).value : nil),
-        (capture(:subject_group) ? capture(:subject_group).value : nil),
-        (capture(:condition_group) ? capture(:condition_group).value : nil)
+        (capture(:var) ?
+           capture(:var).value : nil),
+        (capture(:action_group) ?
+           capture(:action_group).value : nil),
+        (capture(:subject_or_variable) ?
+           capture(:subject_or_variable).value : nil),
+        (capture(:condition_group) ?
+           capture(:condition_group).value : nil)
       ].reject(&:nil?).join(", ") +
       ")"
   end
 end
 
-module Subject
+module SubjectOrVariable
   def value
-    if capture(:subject)
-      "s(:subject, " + capture(:subject).value +
-        (capture(:subject_arguments) ?
-           (", s(:subject_arguments, " + capture(:subject_arguments).value + ")") : "") +
-        ")" +
-        (capture(:subject_group) ? ", " + capture(:subject_group).value : "")
+    more = captures[:subject_or_variable][1..-1].map(&:value)
+
+    if capture(:list_variable)
+      [capture(:list_variable).value, more].reject(&:empty?).join(', ')
+    elsif capture(:subject_group)
+      [capture(:subject_group).value, more].reject(&:empty?).join(', ')
     end
   end
 end

@@ -10,10 +10,10 @@ texts.each do |t, s|
     c = Cookery.parse(t)
 
     if s != :skip and c.value != s
-      puts "parsing... " + t.magenta
+      puts "parsing... " + t.inspect.magenta
       puts "NOT MATCHING".red
-      puts "result is: #{c.value.inspect.blue}".red
-      puts "it was suppose to be #{s.inspect.blue}".red
+      puts "#{c.value.inspect.blue} result".red
+      puts "#{s.inspect.blue} suppose to be".red
 
       p c.captures
 
