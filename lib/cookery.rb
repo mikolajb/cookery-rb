@@ -2,32 +2,57 @@ require 'colored'
 require 'citrus'
 require 'toml'
 require 'slop'
+require 'active_support/core_ext/string'
+$:.unshift File.join(File.dirname(__FILE__), 'cookery')
+require 'helpers'
+require 'dsl_elements'
 
-module Activity
+class Cookery
+  MODULES = []
+
+  def initialize(grammar_file = 'cookery')
+    grammar_file ||= 'cookery'
+    Citrus.require grammar_file
+  end
+
+  def parse(file)
+    CookeryGrammar.parse(file)
+  end
+
+  def evaluate
+    MODULES.each(&:evaluate)
+  end
+end
+
+module ActivityStatement
   def value
-    "s(:activity, " +
-      [
-        (capture(:var) ?
-           capture(:var).value : nil),
-        (capture(:action_group) ?
-           capture(:action_group).value : nil),
-        (capture(:subject_or_variable) ?
-           capture(:subject_or_variable).value : nil),
-        (capture(:condition_group) ?
-           capture(:condition_group).value : nil)
-      ].reject(&:nil?).join(", ") +
-      ")"
+    a = Activity.new
+    add_node(a)
+    closure = ->(i) { capture(:var) ? "(define #{capture(:var).value} #{i})": i}
+
+    closure.call "(" +
+                 [(capture(:action_group) ?
+                     capture(:action_group).value : nil),
+                  (capture(:subject_or_variable) ?
+                     capture(:subject_or_variable).value : nil),
+                  (capture(:condition_group) ?
+                     capture(:condition_group).value : nil)
+                 ].reject(&:nil?).join(" ") +
+                 ")"
   end
 end
 
 module SubjectOrVariable
   def value
     more = captures[:subject_or_variable][1..-1].map(&:value)
+    n = Node.new(:subject)
 
-    if capture(:list_variable)
-      [capture(:list_variable).value, more].reject(&:empty?).join(', ')
+    if capture(:subject_list)
+      n.set(:name, capture(:subject_list).value)
+      [capture(:subject_list).value, more].reject(&:empty?).join(' ')
     elsif capture(:subject_group)
-      [capture(:subject_group).value, more].reject(&:empty?).join(', ')
+      n.set(:name, capture(:subject_group).value)
+      [capture(:subject_group).value, more].reject(&:empty?).join(' ')
     end
   end
 end
@@ -59,11 +84,16 @@ Slop.parse help: true, strict: true do
       end
     end
 
-    Citrus.require config[:grammar_file] || 'cookery'
+    cookery = Cookery.new(config[:grammar_file])
 
     input_files.uniq.each do |f|
-      c = Cookery.parse File.read(f)
-      p c.value
+      new_file f
+      c = cookery.parse File.read(f)
+      sexp = c.value
+      puts sexp
+      cookery.evaluate
     end
+
+    # Cookery::MODULES.each(&:print)
   end
 end
