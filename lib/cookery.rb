@@ -6,6 +6,8 @@ require 'active_support/core_ext/string'
 $:.unshift File.join(File.dirname(__FILE__), 'cookery')
 require 'helpers'
 require 'dsl_elements'
+require 'action'
+require 'subject'
 
 class Cookery
   MODULES = []
@@ -45,13 +47,10 @@ end
 module SubjectOrVariable
   def value
     more = captures[:subject_or_variable][1..-1].map(&:value)
-    n = Node.new(:subject)
 
     if capture(:subject_list)
-      n.set(:name, capture(:subject_list).value)
       [capture(:subject_list).value, more].reject(&:empty?).join(' ')
     elsif capture(:subject_group)
-      n.set(:name, capture(:subject_group).value)
       [capture(:subject_group).value, more].reject(&:empty?).join(' ')
     end
   end

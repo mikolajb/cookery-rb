@@ -61,11 +61,12 @@ grammar CookeryGrammar
 
     n = Node.new(:action)
     n.set(:name, capture(:action).value)
+    add_node(n)
 
     if capture(:action_arguments)
       n.set(:arguments, capture(:action_arguments).value)
-      capture(:action).value + " " +
-      capture(:action_arguments).value
+      capture(:action).value + " \"" +
+      capture(:action_arguments).value + "\""
     else
       capture(:action).value
     end
@@ -78,7 +79,6 @@ grammar CookeryGrammar
 
   rule action_arguments
     ~((space* /[[:upper:]]/) | (space* 'with') | END)
-    { "\"" + to_str + "\"" }
   end
 
   rule subject_or_variable
@@ -101,6 +101,8 @@ grammar CookeryGrammar
 
     n = Node.new(:subject)
     n.set(:name, capture(:subject).value)
+    n.set(:arguments, capture(:subject_arguments).value)
+    add_node(n)
 
     if capture(:subject_arguments)
       n.set(:arguments, capture(:subject_arguments).value)

@@ -43,7 +43,7 @@ class HttpProtocol < CookeryProtocol
   direction :out
 
   def url(url)
-    puts "setting url #{url}".hl(:purple)
+    puts "setting url #{url}".blue
     @url = url
   end
 
@@ -52,19 +52,19 @@ class HttpProtocol < CookeryProtocol
   end
 
   def test
-    puts "test ok".hl(:green)
+    puts "test ok".blule
   end
 end
 
 Subjects = Hash.new
 
 def subject(name, arguments, protocol, &block)
-  puts "defining subject #{name}, #{arguments}, #{protocol}".hl(:lightblue)
+  puts "defining subject #{name}, #{arguments}, #{protocol}".blue
 
   protocol_class = "#{protocol.capitalize}Protocol".safe_constantize
 
   if protocol_class.nil?
-    warn "no such protocol: #{protocol}".hl(:red)
+    warn "no such protocol: #{protocol}".red
   elsif protocol_class.superclass == CookeryProtocol
     Subjects[name] = protocol_class.new(name, arguments, &block)
   end

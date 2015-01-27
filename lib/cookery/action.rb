@@ -6,15 +6,15 @@ class CookeryAction
 
   def act(subject: nil, conditions: [], last_result: nil)
     if subject.nil?
-      puts "in action #{@name}".hl(:lightblue)
+      puts "in action #{@name}".blue
       if !last_result.nil?
-        puts "in action #{@name} with last result #{last_result}".hl(:lightblue)
+        puts "in action #{@name} with last result #{last_result}".blue
       end
     else
       if last_result.nil?
-        puts "in action #{@name} with subject #{subject}".hl(:lightblue)
+        puts "in action #{@name} with subject #{subject}".blue
       else
-        puts "in action #{@name} with subject #{subject} and last result #{last_result}".hl(:lightblue)
+        puts "in action #{@name} with subject #{subject} and last result #{last_result}".blue
       end
     end
 
@@ -23,7 +23,7 @@ class CookeryAction
     if subject.nil?
       res = instance_exec(last_result, &@procedure)
     else
-      puts "acting on subject #{subject} of type #{subject.direction}".hl(:lightblue)
+      puts "acting on subject #{subject} of type #{subject.direction}".blue
       # hack to keep backwords compatible
 
       if subject.direction == :out
@@ -49,5 +49,9 @@ end
 Actions = Hash.new # { |h, k| h[k] = Hash.new }
 
 def action(name, &procedure)
-  Actions[name] = CookeryAction.new(name, &procedure)
+  if Actions.include? name
+    warn "Action #{name} already exists, skipping".red
+  else
+    Actions[name] = CookeryAction.new(name, &procedure)
+  end
 end
