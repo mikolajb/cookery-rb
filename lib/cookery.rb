@@ -56,43 +56,48 @@ module SubjectOrVariable
   end
 end
 
-Slop.parse help: true, strict: true do
-  banner "Usage: cookery [options] file..."
+opts = Slop.parse help: true, strict: true do |o|
+  o.banner = "Usage: cookery [options] file..."
 
-  on :c, :config=, "Config file.", default: 'config.toml'
-  on :grammar_file=, "Grammar file."
-  on :print_options, "Print options and exit."
-
-  run do |options, input_files|
-    config = {}
-    if File.exists? options[:config]
-      config = TOML.load_file(options[:config])
-      # symbolize keys
-      config.keys.each do |key|
-        config[(key.to_sym rescue key) || key] = config.delete(key)
-      end
-      # replace options from config with options from command line
-      config.
-        merge!(options.to_h) { |key, v1, v2| v2 ? v2 : v1 }.
-        reject! { |key, value| value.nil? }
-    end
-
-    if options.print_options?
-      config.each do |k, v|
-        puts "#{k}: #{v ? v : 'NO'}"
-      end
-    end
-
-    cookery = Cookery.new(config[:grammar_file])
-
-    input_files.uniq.each do |f|
-      new_file f
-      c = cookery.parse File.read(f)
-      sexp = c.value
-      puts sexp
-      cookery.evaluate
-    end
-
-    # Cookery::MODULES.each(&:print)
+  o.string '-c', '--config', "Config file.", default: 'config.toml'
+  o.string '--grammar_file', "Grammar file."
+  o.on '--print_options', "Print options and exit."
+  o.on '-h', '--help' do
+    puts o
+    exit
   end
 end
+
+options = opts.to_hash
+input_files = opts.arguments
+
+config = {}
+if File.exists? options[:config]
+  config = TOML.load_file(options[:config])
+  # symbolize keys
+  config.keys.each do |key|
+    config[(key.to_sym rescue key) || key] = config.delete(key)
+  end
+  # replace options from config with options from command line
+  config.
+    merge!(options.to_h) { |key, v1, v2| v2 ? v2 : v1 }.
+    reject! { |key, value| value.nil? }
+end
+
+if options.include? "print_options"
+  config.each do |k, v|
+    puts "#{k}: #{v ? v : 'NO'}"
+  end
+end
+
+cookery = Cookery.new(config[:grammar_file])
+
+input_files.uniq.each do |f|
+  new_file f
+  c = cookery.parse File.read(f)
+  sexp = c.value
+  puts sexp
+  cookery.evaluate
+end
+
+# Cookery::MODULES.each(&:print)
