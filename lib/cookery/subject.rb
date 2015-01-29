@@ -4,22 +4,26 @@ require 'rest_client'
 class CookeryProtocol
   attr_accessor :name, :arguments
 
-  def self.direction(dir)
-    class_variable_set(:@@direction, dir)
+  def self.type(*dir)
+    class_variable_set(:@@type, dir)
   end
 
-  def direction
-    self.class.class_variable_get(:@@direction)
+  def type
+    self.class.class_variable_get(:@@type)
+  end
+
+  def type?(potential_type)
+    type.include?(potential_type)
   end
 
   def initialize(name, arguments, &block)
-    @name = /#{name}/
+    @name = name
     @arguments = arguments
     @block = block
   end
 
   def to_s
-    @name.to_s
+    "#{@name} #{@arguments.inspect}"
   end
 
   def args(arguments)
@@ -28,7 +32,7 @@ class CookeryProtocol
 end
 
 class FileProtocol < CookeryProtocol
-  direction :in
+  type :in, :out
 
   def path(path)
     @path = path
@@ -40,7 +44,7 @@ class FileProtocol < CookeryProtocol
 end
 
 class HttpProtocol < CookeryProtocol
-  direction :out
+  type :out
 
   def url(url)
     puts "setting url #{url}".blue
@@ -59,8 +63,6 @@ end
 Subjects = Hash.new
 
 def subject(name, arguments, protocol, &block)
-  puts "defining subject #{name}, #{arguments}, #{protocol}".blue
-
   protocol_class = "#{protocol.capitalize}Protocol".safe_constantize
 
   if protocol_class.nil?

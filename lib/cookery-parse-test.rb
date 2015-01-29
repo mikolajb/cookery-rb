@@ -7,12 +7,12 @@ texts = eval(File.open(File.join(File.dirname(__FILE__), 'test-cases.rb')).read)
 counter = 0
 texts.each do |t, s|
   begin
+    puts "parsing... " + t.inspect.magenta
     new_file t
     cookery = Cookery.new
     c = cookery.parse(t)
 
     if s != :skip and c.value != s
-      puts "parsing... " + t.inspect.magenta
       puts "NOT MATCHING".red
       puts "#{c.value.inspect.blue} <- result".red
       puts "#{s.inspect.blue} <- suppose to be".red
@@ -24,7 +24,6 @@ texts.each do |t, s|
       puts ("-" * 80).yellow
       next
     end
-
     counter += 1
   rescue Citrus::ParseError => e
     puts t.magenta

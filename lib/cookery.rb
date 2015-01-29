@@ -5,12 +5,15 @@ require 'slop'
 require 'active_support/core_ext/string'
 $:.unshift File.join(File.dirname(__FILE__), 'cookery')
 require 'helpers'
+require 'operation'
 require 'dsl_elements'
 require 'action'
 require 'subject'
+require 'condition'
 
 class Cookery
   MODULES = []
+  OPERATIONS = {}
 
   def initialize(grammar_file = 'cookery')
     grammar_file ||= 'cookery'
@@ -21,8 +24,25 @@ class Cookery
     CookeryGrammar.parse(file)
   end
 
-  def evaluate
-    MODULES.each(&:evaluate)
+  def process_files(files)
+    files.inject("first value") do |state, f|
+      puts "Reading file ".black_on_green +
+           " #{f} ".black_on_magenta
+      new_file f
+      c = parse File.read(f)
+      sexp = c.value
+      puts sexp
+      state = evaluate(state)
+      puts "Result after file ".black_on_green +
+           " #{f} ".black_on_magenta +
+           " is ".black_on_green +
+           " #{state} ".black_on_magenta
+      state
+    end
+  end
+
+  def evaluate(result)
+    MODULES.inject(result) { |memo, m| m.evaluate(memo) }
   end
 end
 
@@ -91,13 +111,5 @@ if options.include? "print_options"
 end
 
 cookery = Cookery.new(config[:grammar_file])
-
-input_files.uniq.each do |f|
-  new_file f
-  c = cookery.parse File.read(f)
-  sexp = c.value
-  puts sexp
-  cookery.evaluate
-end
-
-# Cookery::MODULES.each(&:print)
+result = cookery.process_files(input_files.uniq)
+puts "Final STATE: ".black_on_green + " #{result} ".black_on_magenta

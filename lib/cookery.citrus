@@ -78,7 +78,7 @@ grammar CookeryGrammar
   end
 
   rule action_arguments
-    ~((space* /[[:upper:]]/) | (space* 'with') | END)
+    ~((space* /[[:upper:]]/) | (space* condition_separator) | END)
   end
 
   rule subject_or_variable
@@ -101,13 +101,12 @@ grammar CookeryGrammar
 
     n = Node.new(:subject)
     n.set(:name, capture(:subject).value)
-    n.set(:arguments, capture(:subject_arguments).value)
     add_node(n)
 
     if capture(:subject_arguments)
       n.set(:arguments, capture(:subject_arguments).value)
-      "(" + capture(:subject).value + " " +
-        capture(:subject_arguments).value + ")"
+      "(" + capture(:subject).value + " \"" +
+        capture(:subject_arguments).value + "\")"
     else
       capture(:subject).value
     end
@@ -119,12 +118,11 @@ grammar CookeryGrammar
   end
 
   rule subject_arguments
-    ~((space* 'with') | (space* AND) | END) {
-    "\"" + to_str + "\"" }
+    ~((space* condition_separator) | (space* AND) | END)
   end
 
   rule condition_group
-    ('with' space+ condition (space+ condition_arguments)?) {
+    (condition_separator space+ condition (space+ condition_arguments)?) {
 
     n = Node.new(:condition)
     n.set(:name, capture(:condition).value)
@@ -132,8 +130,8 @@ grammar CookeryGrammar
 
     if capture(:condition_arguments)
       n.set(:arguments, capture(:condition_arguments).value)
-      "(" + capture(:condition).value + " " +
-        capture(:condition_arguments).value + ")"
+      "(" + capture(:condition).value + " \"" +
+        capture(:condition_arguments).value + "\")"
     else
       capture(:condition).value
     end
@@ -145,7 +143,7 @@ grammar CookeryGrammar
   end
 
   rule condition_arguments
-    ~END { "\"" + to_str + "\""}
+    ~END
   end
 
   rule comment /\#.*/ end
@@ -153,4 +151,5 @@ grammar CookeryGrammar
   rule END /[ \t\n\r]*\.(\z|[ \t\n\r])/ end
   rule AND 'and' end
   rule variable_separator space* '=' end
+  rule condition_separator 'with' | 'if' end
 end
