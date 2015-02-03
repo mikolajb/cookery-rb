@@ -20,15 +20,31 @@ class Cookery
     Citrus.require grammar_file
   end
 
-  def parse(file)
-    CookeryGrammar.parse(file)
+  # Parses the string
+  #
+  def parse(string)
+    m = CookeryGrammar.parse(string)
+    # p m.dump
+    m
+  end
+
+  def process_string(string)
+    puts "Processing string".black_on_green
+    c = parse string
+    MODULES << CookeryModule.new("<string>")
+    sexp = c.value
+    puts sexp
+    result = evaluate("first value")
+    puts "Result after evaluation is ".black_on_green +
+         " #{result}"
+    result
   end
 
   def process_files(files)
     files.inject("first value") do |state, f|
       puts "Reading file ".black_on_green +
            " #{f} ".black_on_magenta
-      new_file f
+      process_file(f)
       c = parse File.read(f)
       sexp = c.value
       puts sexp
@@ -41,6 +57,22 @@ class Cookery
     end
   end
 
+  # Helper method used to handle input files contating source code of
+  # Cookery langauge.
+
+  def process_file(file)
+    MODULES << CookeryModule.new(file)
+
+    implementation = File.absolute_path(
+      File.join(File.dirname(file),
+                File.basename(file, File.extname(file)) + '.rb'))
+
+    if File.exist? implementation
+      require implementation
+    end
+  end
+
+  # Evaluates all existing modules
   def evaluate(result)
     MODULES.inject(result) { |memo, m| m.evaluate(memo) }
   end
@@ -76,12 +108,13 @@ module SubjectOrVariable
   end
 end
 
-opts = Slop.parse help: true, strict: true do |o|
+opts = Slop.parse help: true do |o|
   o.banner = "Usage: cookery [options] file..."
 
   o.string '-c', '--config', "Config file.", default: 'config.toml'
   o.string '--grammar_file', "Grammar file."
-  o.on '--print_options', "Print options and exit."
+  o.string '-e', '--eval', "Evaluate expression."
+  o.bool '--print_options', "Print options and exit."
   o.on '-h', '--help' do
     puts o
     exit
@@ -104,12 +137,22 @@ if File.exists? options[:config]
     reject! { |key, value| value.nil? }
 end
 
-if options.include? "print_options"
+if options[:print_options]
+  puts "Options:"
   config.each do |k, v|
-    puts "#{k}: #{v ? v : 'NO'}"
+    puts " #{k}: #{v ? v : 'NO'}"
   end
+  exit
 end
 
 cookery = Cookery.new(config[:grammar_file])
-result = cookery.process_files(input_files.uniq)
+
+if options[:eval] and !input_files.empty?
+    puts "Evaluating string, the following input files are ignored:"
+    puts input_files.join(", ")
+end
+
+result = options[:eval] ?
+           cookery.process_string(options[:eval]) :
+           cookery.process_files(input_files.uniq)
 puts "Final STATE: ".black_on_green + " #{result} ".black_on_magenta

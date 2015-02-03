@@ -8,8 +8,8 @@ counter = 0
 texts.each do |t, s|
   begin
     puts "parsing... " + t.inspect.magenta
-    new_file t
     cookery = Cookery.new
+    cookery.process_file(t)
     c = cookery.parse(t)
 
     if s != :skip and c.value != s

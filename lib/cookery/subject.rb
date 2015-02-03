@@ -27,7 +27,11 @@ class CookeryProtocol
   end
 
   def args(arguments)
-    instance_exec(*@arguments.match(arguments).captures, &@block)
+    if @arguments
+      instance_exec(*@arguments.match(arguments).captures, &@block)
+    else
+      instance_exec(&@block)
+    end
   end
 end
 
@@ -56,8 +60,12 @@ class HttpProtocol < CookeryProtocol
   end
 
   def test
-    puts "test ok".blule
+    puts "test ok".blue
   end
+end
+
+class TestProtocol < CookeryProtocol
+  type :out
 end
 
 Subjects = Hash.new
@@ -70,4 +78,8 @@ def subject(name, arguments, protocol, &block)
   elsif protocol_class.superclass == CookeryProtocol
     Subjects[name] = protocol_class.new(name, arguments, &block)
   end
+end
+
+subject("Test", nil, "test") do
+  "fake result".bytes.map { |i| (i >= 97 and i <= 122 and rand > 0.5) ? i - 32 : i }.pack("c*")
 end

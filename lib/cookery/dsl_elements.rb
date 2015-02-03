@@ -4,21 +4,6 @@ def add_node(node)
   Cookery::MODULES.last.send("add_#{node.type}".to_sym, node)
 end
 
-# Helper method used to handle input files contating source code of
-# Cookery langauge.
-
-def new_file(file)
-  Cookery::MODULES << CookeryModule.new(file)
-
-  implementation = File.absolute_path(
-    File.join(File.dirname(file),
-              File.basename(file, File.extname(file)) + '.rb'))
-
-  if File.exist? implementation
-    require implementation
-  end
-end
-
 # Node handles all elements of Cookery language (e.g., actions,
 # subjects, etc).
 
@@ -44,8 +29,8 @@ class CookeryModule
 
   attr_accessor :variables, :state
 
-  def initialize(path)
-    @path = path
+  def initialize(name)
+    @name = name
     @state = nil
     @variables = Hash.new
   end
