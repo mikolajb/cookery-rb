@@ -30,14 +30,14 @@ grammar CookeryGrammar
   end
 
   rule activity
-    ((var:(list_variable | variable) variable_separator)?
-    space* action_group
-    (space* subject_or_variable)?
-    (space* condition_group)? END) <ActivityStatement>
+    ((var:(list_variable | variable) variable_separator space+)?
+    action_group
+    (space+ subject_or_variable)?
+    (space+ condition_group)? END) <ActivityStatement>
   end
 
   rule variable
-    /[[:upper:]][[:alnum:]]*/ {
+    /\b[[:upper:]][[:alnum:]]*\b/ {
       n = Node.new(:variable)
       n.set(:name, to_str)
       add_node(n)
@@ -47,7 +47,7 @@ grammar CookeryGrammar
   end
 
   rule list_variable
-    (/[[:upper:]][[:alnum:]]*/ '[]') {
+    (/\b[[:upper:]][[:alnum:]]*\b/ '[]') {
       n = Node.new(:list_variable)
       n.set(:name, to_str)
       add_node(n)
@@ -74,11 +74,17 @@ grammar CookeryGrammar
   end
 
   rule action
-    /[[:lower:]_-]+/
+    /\b[[:lower:]_-]+\b/
   end
 
   rule action_arguments
-    ~((space* /[[:upper:]]/) | (space* condition_separator) | END)
+    (action_argument (space+ action_argument)*) {
+    captures[:action_argument].map { |a| a.value }.join(' ')
+    }
+  end
+
+  rule action_argument
+    (~(subject | subject_list | condition_separator | space | END) (~(space | END))?)
   end
 
   rule subject_or_variable
@@ -87,7 +93,7 @@ grammar CookeryGrammar
   end
 
   rule subject_list
-    (/[[:upper:]][[:alnum:]]*/ '[]') {
+    (/\b[[:upper:]][[:alnum:]]*\b/ '[]') {
       n = Node.new(:list_subject)
       n.set(:name, to_str)
       add_node(n)
@@ -114,11 +120,17 @@ grammar CookeryGrammar
   end
 
   rule subject
-    /[[:upper:]][[:alnum:]]*/
+    /\b[[:upper:]][[:alnum:]]*\b/
   end
 
   rule subject_arguments
-    ~((space* condition_separator) | (space* AND) | END)
+    (subject_argument (space+ subject_argument)*) {
+    captures[:subject_argument].map { |a| a.value }.join(' ')
+    }
+  end
+
+  rule subject_argument
+    (~(condition_separator | AND | space | END) (~(space | END))?)
   end
 
   rule condition_group
@@ -139,7 +151,7 @@ grammar CookeryGrammar
   end
 
   rule condition
-    /[[:alnum:]]+/
+    /\b[[:alnum:]]+\b/
   end
 
   rule condition_arguments
@@ -151,5 +163,5 @@ grammar CookeryGrammar
   rule END /[ \t\n\r]*\.(\z|[ \t\n\r])/ end
   rule AND 'and' end
   rule variable_separator space* '=' end
-  rule condition_separator 'with' | 'if' end
+  rule condition_separator /\bwith\b/ | /\bif\b/ end
 end
