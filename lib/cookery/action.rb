@@ -1,3 +1,5 @@
+require 'json'
+
 class CookeryAction
   attr_accessor :type
 
@@ -7,11 +9,21 @@ class CookeryAction
     @procedure = procedure
   end
 
-  def process(data)
-    instance_exec(data, &@procedure)
+  def process(data, arguments)
+    begin
+      p arguments
+      arguments = JSON.parse(arguments)
+      puts "Action arguments are in JSON".black_on_green
+    rescue JSON::ParserError => e
+      puts "Action arguments are ".black_on_green +
+           "NOT".black_on_magenta +
+           " in JSON".black_on_green
+    end if arguments
+
+    instance_exec(data, arguments, &@procedure)
   end
 
-  def act(subject: nil, conditions: [], last_result: nil)
+  def act_old(subject: nil, conditions: [], last_result: nil, arguments: nil)
     if subject.nil?
       puts "In action #{@name}"
       if !last_result.nil?

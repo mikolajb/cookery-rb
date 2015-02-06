@@ -84,7 +84,7 @@ grammar CookeryGrammar
   end
 
   rule action_argument
-    (~(subject | subject_list | condition_separator | space | END) (~(space | END))?)
+    ('{' /[^}]+/ '}') | (~(subject | subject_list | condition_separator | space | END) (~(space | END))?)
   end
 
   rule subject_or_variable
