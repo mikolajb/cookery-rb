@@ -74,8 +74,3 @@ def action(name, type, &procedure)
     Actions[name] = CookeryAction.new(name, type, &procedure)
   end
 end
-
-action("test", :out) do |data|
-  puts "Just a test, passing data from subject"
-  data
-end

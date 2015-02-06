@@ -108,12 +108,44 @@ module SubjectOrVariable
   end
 end
 
+empty_project = {}
+empty_project['.rb'] = <<SOURCE
+action("test", :out) do |data|
+  puts "Just a test, passing data from subject"
+  data
+end
+
+subject("Test", nil, "test") do
+  "fake result".bytes.map { |i| (i >= 97 and i <= 122 and rand > 0.5) ? i - 32 : i }.pack("c*")
+end
+SOURCE
+
+empty_project['.cookery'] = <<SOURCE
+test Test.
+SOURCE
+
 opts = Slop.parse help: true do |o|
   o.banner = "Usage: cookery [options] file..."
 
   o.string '-c', '--config', "Config file.", default: 'config.toml'
   o.string '--grammar_file', "Grammar file."
   o.string '-e', '--eval', "Evaluate expression."
+  o.string '-n', '--new', "New Cookery project." do |project_name|
+    empty_project.keys.each do |ext|
+      if !Dir.exists?(project_name)
+        Dir.mkdir(project_name)
+      end
+
+      if File.exists?(File.join(project_name, project_name + ext))
+        warn "File #{project_name + ext} exists"
+      else
+        File.open(File.join(project_name, project_name + ext), 'w+') do |f|
+          f.write empty_project[ext]
+        end
+      end
+    end
+    exit
+  end
   o.bool '--print_options', "Print options and exit."
   o.on '-h', '--help' do
     puts o

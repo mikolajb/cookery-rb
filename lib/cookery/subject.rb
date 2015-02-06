@@ -79,7 +79,3 @@ def subject(name, arguments, protocol, &block)
     Subjects[name] = protocol_class.new(name, arguments, &block)
   end
 end
-
-subject("Test", nil, "test") do
-  "fake result".bytes.map { |i| (i >= 97 and i <= 122 and rand > 0.5) ? i - 32 : i }.pack("c*")
-end
