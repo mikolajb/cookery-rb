@@ -15,9 +15,19 @@ class Cookery
   MODULES = []
   OPERATIONS = {}
 
-  def initialize(grammar_file = 'cookery')
-    grammar_file ||= 'cookery'
-    Citrus.require grammar_file
+  attr_reader :config
+
+  def initialize(config)
+    @config = config
+    if !@config.include? :actions
+      @config[:actions] = {}
+    else
+      @config[:actions].symbolize_keys!
+      @config[:actions].keys.each do |k|
+        @config[:actions][k].symbolize_keys!
+      end
+    end
+    Citrus.require config[:grammar_file] || 'cookery'
   end
 
   # Parses the string
@@ -31,7 +41,7 @@ class Cookery
   def process_string(string)
     puts "Processing string".black_on_green
     c = parse string
-    MODULES << CookeryModule.new("<string>")
+    MODULES << CookeryModule.new("<string>", @config)
     sexp = c.value
     puts sexp
     result = evaluate("first value")
@@ -61,7 +71,7 @@ class Cookery
   # Cookery langauge.
 
   def process_file(file)
-    MODULES << CookeryModule.new(file)
+    MODULES << CookeryModule.new(file, @config)
 
     implementation = File.absolute_path(
       File.join(File.dirname(file),
@@ -155,7 +165,6 @@ end
 
 options = opts.to_hash
 input_files = opts.arguments
-
 config = {}
 if File.exists? options[:config]
   config = TOML.load_file(options[:config])
@@ -167,6 +176,8 @@ if File.exists? options[:config]
   config.
     merge!(options.to_h) { |key, v1, v2| v2 ? v2 : v1 }.
     reject! { |key, value| value.nil? }
+else
+  warn "Configuration file not found."
 end
 
 if options[:print_options]
@@ -177,7 +188,7 @@ if options[:print_options]
   exit
 end
 
-cookery = Cookery.new(config[:grammar_file])
+cookery = Cookery.new(config)
 
 if options[:eval] and !input_files.empty?
     puts "Evaluating string, the following input files are ignored:"

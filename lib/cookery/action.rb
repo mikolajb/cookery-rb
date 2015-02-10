@@ -20,7 +20,11 @@ class CookeryAction
            " in JSON".black_on_green
     end if arguments
 
-    instance_exec(data, arguments, &@procedure)
+    instance_exec(data, arguments, @config, &@procedure)
+  end
+
+  def config=(config)
+    @config = config
   end
 
   def act_old(subject: nil, conditions: [], last_result: nil, arguments: nil)
