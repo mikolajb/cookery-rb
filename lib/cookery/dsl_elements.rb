@@ -114,12 +114,12 @@ class Activity
 
         puts "Evaluating action: ".black_on_green +
              " #{@action.params[:name]} ".black_on_magenta
-        single_res = action_impl.process(x, @action.params[:arguments])
+        single_res = action_impl.process(single_res, @action.params[:arguments])
 
         if @conditions.nil? or @conditions.empty?
         else
-          single_res = @conditions.inject(x) do |memo, c|
-            Conditions[c.params[:name]].execute(x, c.params[:arguments])
+          single_res = @conditions.inject(single_res) do |memo, c|
+            Conditions[c.params[:name]].execute(memo, c.params[:arguments])
           end
         end
       else
