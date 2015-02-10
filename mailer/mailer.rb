@@ -19,6 +19,7 @@ action('send', :out) do |s, args, config|
                          :user_name,
                          :password,
                          :authentication].include?(k) }))
+  s.deliver
 end
 
 
