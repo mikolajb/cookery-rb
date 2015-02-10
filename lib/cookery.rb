@@ -1,15 +1,4 @@
-require 'colored'
-require 'citrus'
-require 'toml'
 require 'slop'
-require 'active_support/core_ext/string'
-$:.unshift File.join(File.dirname(__FILE__), 'cookery')
-require 'helpers'
-require 'operation'
-require 'dsl_elements'
-require 'action'
-require 'subject'
-require 'condition'
 
 class Cookery
   MODULES = []
@@ -140,16 +129,18 @@ opts = Slop.parse help: true do |o|
   o.string '-c', '--config', "Config file.", default: 'config.toml'
   o.string '--grammar_file', "Grammar file."
   o.string '-e', '--eval', "Evaluate expression."
-  o.string '-n', '--new', "New Cookery project." do |project_name|
+  o.string '-n', '--new', "New Cookery project." do |project_path|
     empty_project.keys.each do |ext|
-      if !Dir.exists?(project_name)
-        Dir.mkdir(project_name)
+      if !Dir.exists?(project_path)
+        Dir.mkdir(project_path)
       end
 
-      if File.exists?(File.join(project_name, project_name + ext))
+      project_name = File.basename(project_path)
+
+      if File.exists?(File.join(project_path, project_name + ext))
         warn "File #{project_name + ext} exists"
       else
-        File.open(File.join(project_name, project_name + ext), 'w+') do |f|
+        File.open(File.join(project_path, project_name + ext), 'w+') do |f|
           f.write empty_project[ext]
         end
       end
@@ -162,6 +153,18 @@ opts = Slop.parse help: true do |o|
     exit
   end
 end
+
+require 'colored'
+require 'citrus'
+require 'toml'
+require 'active_support/core_ext/string'
+$:.unshift File.join(File.dirname(__FILE__), 'cookery')
+require 'helpers'
+require 'operation'
+require 'dsl_elements'
+require 'action'
+require 'subject'
+require 'condition'
 
 options = opts.to_hash
 input_files = opts.arguments
