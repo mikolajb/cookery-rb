@@ -1,0 +1,3 @@
+[submodule "cookery-apps"]
+	path = cookery-apps
+	url = git://github.com/mikolajb/cookery-apps.git
