@@ -11,10 +11,7 @@ class Cookery
     if !@config.include? :actions
       @config[:actions] = {}
     else
-      @config[:actions].symbolize_keys!
-      @config[:actions].keys.each do |k|
-        @config[:actions][k].symbolize_keys!
-      end
+      @config[:actions].deep_symbolize_keys!
     end
     Citrus.require config[:grammar_file] || 'cookery'
   end
@@ -60,13 +57,23 @@ class Cookery
   # Cookery langauge.
 
   def process_file(file)
+    load_other_files = -> (file, extension) do
+      File.absolute_path(
+        File.join(File.dirname(file),
+                  File.basename(file, File.extname(file)) + extension))
+    end
+
+    implementation, configuration = [[file, '.rb'], [file, '.toml']].map(&load_other_files)
+
+    module_config = File.exist?(configuration) ? TOML.load_file(configuration) : {}
+
+    module_config.deep_symbolize_keys!
+    @config.deep_merge!(module_config)
+
     MODULES << CookeryModule.new(file, @config)
 
-    implementation = File.absolute_path(
-      File.join(File.dirname(file),
-                File.basename(file, File.extname(file)) + '.rb'))
-
     if File.exist? implementation
+      p implementation
       require implementation
     end
   end
@@ -123,6 +130,12 @@ empty_project['.cookery'] = <<SOURCE
 test Test.
 SOURCE
 
+empty_project['.toml'] = <<SOURCE
+[actions]
+    [actions.test]
+    just_an_example = true
+SOURCE
+
 opts = Slop.parse help: true do |o|
   o.banner = "Usage: cookery [options] file..."
 
@@ -157,7 +170,7 @@ end
 require 'colored'
 require 'citrus'
 require 'toml'
-require 'active_support/core_ext/string'
+require 'active_support/all'
 $:.unshift File.join(File.dirname(__FILE__), 'cookery')
 require 'helpers'
 require 'operation'

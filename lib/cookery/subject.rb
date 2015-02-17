@@ -1,4 +1,3 @@
-require 'active_support/all'
 require 'rest_client'
 
 class CookeryProtocol
