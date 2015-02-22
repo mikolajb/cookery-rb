@@ -1,7 +1,7 @@
 # Helper method used in Cookery grammar.
 
 def add_node(node)
-  Cookery::MODULES.last.send("add_#{node.type}".to_sym, node)
+  Cookery.module.send("add_#{node.type}".to_sym, node)
 end
 
 # Node handles all elements of Cookery language (e.g., actions,
@@ -23,14 +23,16 @@ end
 
 # CookeryModule is a class that handles one input file with a source
 # code of Cookery language.
+# @name: relative path to file
 
 class CookeryModule
   include Printer
 
-  attr_accessor :variables, :state, :config
+  attr_accessor :name, :variables, :state, :config
 
-  def initialize(name, config = nil)
+  def initialize(name, cookery, config = nil)
     @name = name
+    @cookery = cookery
     @state = nil
     @variables = Hash.new
     @config = config
@@ -42,7 +44,6 @@ class CookeryModule
        instance_variable_set('@' + element_id.pluralize, Array.new)) <<
         args.first
     elsif /add_(?<element_id>[[:alnum:]_-]+)/ =~ method
-      # p element_id, args
       @activities.last.send("add_#{element_id}", *args)
     else
       throw NoMethodError.new("No method #{method} in CookeryModule")
@@ -53,13 +54,19 @@ class CookeryModule
     @state = value
     puts "Evaluate module with starting value: ".black_on_green +
          " #{value.inspect} ".black_on_magenta
+
+    @imports.each do |i|
+      abs_path = File.expand_path(i.params[:path], File.dirname(@name))
+      @cookery.process_file(abs_path + '.cookery', i.params[:module_name])
+    end if @imports
+
     @activities.each do |a|
       a.evaluate(self)
       puts "Debug variables ".black_on_green +
            " #{@variables.inspect} ".black_on_magenta +
            " and state ".black_on_green +
            " #{@state.inspect} ".black_on_magenta
-    end
+    end if @activities
     @state
   end
 end
@@ -77,6 +84,14 @@ class Activity
 
     if !@action
       warn "no action to evaluate".red
+      return
+    else
+      puts "Action to evaluate: #{@action.params[:name]}".black_on_green
+    end
+
+    if m = Cookery.modules_by_ref[@action.params[:name]]
+      puts "Evaluate module by reference: #{@action.params[:name]}".black_on_green
+      c_module.state = m.evaluate(c_module.state)
       return
     end
 
@@ -134,7 +149,6 @@ class Activity
     if @subjects.nil?
       puts "Evaluating action: ".black_on_green +
            " #{@action.params[:name]} ".black_on_magenta
-      p @action.params
       result = action_impl.process(c_module.state,
                                    @action.params[:arguments])
     end

@@ -1,12 +1,14 @@
 require 'slop'
 
 class Cookery
-  MODULES = []
+  @@modules = []
+  @@modules_by_ref = {}
+  @@module = nil
   OPERATIONS = {}
 
   attr_reader :config
 
-  def initialize(config)
+  def initialize(config = {})
     @config = config
     if !@config.include? :actions
       @config[:actions] = {}
@@ -16,18 +18,25 @@ class Cookery
     Citrus.require config[:grammar_file] || 'cookery'
   end
 
+  def self.module
+    @@module
+  end
+
+  def self.modules_by_ref
+    @@modules_by_ref
+  end
+
   # Parses the string
   #
   def parse(string)
-    m = CookeryGrammar.parse(string)
-    # p m.dump
-    m
+    CookeryGrammar.parse(string)
   end
 
   def process_string(string)
     puts "Processing string".black_on_green
     c = parse string
-    MODULES << CookeryModule.new("<string>", @config)
+    @@modules << CookeryModule.new("<string>", self, @config)
+    @@module = @@modules.last
     sexp = c.value
     puts sexp
     result = evaluate("first value")
@@ -41,9 +50,6 @@ class Cookery
       puts "Reading file ".black_on_green +
            " #{f} ".black_on_magenta
       process_file(f)
-      c = parse File.read(f)
-      sexp = c.value
-      puts sexp
       state = evaluate(state)
       puts "Result after file ".black_on_green +
            " #{f} ".black_on_magenta +
@@ -56,31 +62,59 @@ class Cookery
   # Helper method used to handle input files contating source code of
   # Cookery langauge.
 
-  def process_file(file)
+  def process_file(file, reference = nil)
+    already_processed = @@modules.select { |m| m.name == File.absolute_path(file)}
+    if already_processed.length == 1
+      if reference
+        @@modules_by_ref[reference] = already_processed.first
+        return
+      end
+    elsif already_processed.length > 1
+      warn "This module processed more than once".red
+    end
+
     load_other_files = -> (file, extension) do
       File.absolute_path(
         File.join(File.dirname(file),
                   File.basename(file, File.extname(file)) + extension))
     end
 
-    implementation, configuration = [[file, '.rb'], [file, '.toml']].map(&load_other_files)
+    implementation, configuration = [[file, '.rb'],
+                                     [file, '.toml']].map(&load_other_files)
 
-    module_config = File.exist?(configuration) ? TOML.load_file(configuration) : {}
+    if File.exist?(configuration)
+      puts "Loading configuration file: #{configuration}".black_on_green
+      module_config = TOML.load_file(configuration).deep_symbolize_keys
+      @config.deep_merge!(module_config)
+    else
+      puts "No configuration file: #{configuration}".black_on_magenta
+    end
 
-    module_config.deep_symbolize_keys!
-    @config.deep_merge!(module_config)
-
-    MODULES << CookeryModule.new(file, @config)
+    # Module by reference is loaded during the execution of other modules
+    if reference
+      @@modules_by_ref[reference] =
+        CookeryModule.new(File.absolute_path(file), self, @config)
+      @@module = @@modules_by_ref[reference]
+    else
+      @@modules << CookeryModule.new(File.absolute_path(file), self, @config)
+      @@module = @@modules.last
+    end
 
     if File.exist? implementation
-      p implementation
+      puts "Loading implementation file: #{implementation}".black_on_green
       require implementation
+    else
+      puts "No implementation file: #{implementation}".black_on_magenta
     end
+
+    c = parse File.read(file)
+    sexp = c.value
+    puts sexp
   end
 
   # Evaluates all existing modules
   def evaluate(result)
-    MODULES.inject(result) { |memo, m| m.evaluate(memo) }
+    @@modules.inject(result) { |memo, m| m.evaluate(memo) }
   end
 end
 
