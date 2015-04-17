@@ -1,2 +1,5 @@
-create-email {"to": "mikolajb@gmail.com", "from": "mikolajb@gmail.com", "subject": "topic1", "body": "Message for Email 1"}.
+create-email {"to"      : "mikolajb@gmail.com",
+              "from"    : "mikolajb@gmail.com",
+              "subject" : "Results",
+              "body"    : "Results for language test"}.
 send.

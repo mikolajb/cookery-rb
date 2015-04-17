@@ -1,12 +1,18 @@
-require 'mail'
-
 action('create-email', :out) do |s, args|
-  Mail.new do
+  require 'mail'
+
+  m = Mail.new do
     to args['to']
     from args['from']
     subject args['subject']
-    body args['body']
+    part :content_type => 'text/plain', :body => args['body']
   end
+
+  s.each_with_index do |i, ii|
+    m.attachments["result#{ii}"] = {:mime_type => 'text/plain',
+                                    :content => i}
+  end
+  m
 end
 
 action('send', :out) do |s, args, config|
@@ -21,5 +27,3 @@ action('send', :out) do |s, args, config|
                          :authentication].include?(k) }))
   s.deliver
 end
-
-
