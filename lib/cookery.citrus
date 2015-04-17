@@ -74,7 +74,7 @@ grammar CookeryGrammar
   end
 
   rule action
-    /\b[[:lower:]_-]+\b/
+    /\b[[:lower:]][[:alnum:]_-]*\b/
   end
 
   rule action_arguments

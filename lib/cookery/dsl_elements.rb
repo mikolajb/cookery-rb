@@ -1,7 +1,9 @@
+require 'set'
+
 # Helper method used in Cookery grammar.
 
 def add_node(node)
-  Cookery.module.send("add_#{node.type}".to_sym, node)
+  Cookery.module.send("add_#{node.type}".to_sym, node) unless Cookery.module.nil?
 end
 
 # Node handles all elements of Cookery language (e.g., actions,
@@ -90,7 +92,8 @@ class Activity
     end
 
     if m = Cookery.modules_by_ref[@action.params[:name]]
-      puts "Evaluate module by reference: #{@action.params[:name]}".black_on_green
+      puts "Evaluate module by reference: " \
+           "#{@action.params[:name]}".black_on_green
       c_module.state = m.evaluate(c_module.state)
       return
     end
@@ -110,6 +113,15 @@ class Activity
     subjects_in_activity = (@subjects || []).reject { |s|
       c_module.variables.keys.include?(s.params[:name]) }
 
+    not_implemented_subjects = subjects_in_activity.reject { |s|
+      Subjects.include? s.params[:name] }.
+                               to_set - variables_in_activity.to_set
+
+    if !not_implemented_subjects.empty?
+      warn "Subjects not implemented: ".red + not_implemented_subjects.map { |s|
+        s.params[:name] }.join(', ')
+    end
+
     # check if the subjects and action are comatible
     unless subjects_in_activity.all? { |s|
         Subjects[s.params[:name]].type?(action_impl.type) } or
@@ -125,7 +137,8 @@ class Activity
         subj_implementation = Subjects[s.params[:name]]
         puts "Evaluating subject ".black_on_green +
              " #{Subjects[s.params[:name]]} ".black_on_magenta
-        single_res = Subjects[s.params[:name]].args(s.params[:arguments])
+        single_res = Subjects[s.params[:name]]
+        single_res.args(s.params[:arguments])
 
         puts "Evaluating action: ".black_on_green +
              " #{@action.params[:name]} ".black_on_magenta

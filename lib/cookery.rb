@@ -170,7 +170,7 @@ empty_project['.toml'] = <<SOURCE
     just_an_example = true
 SOURCE
 
-opts = Slop.parse help: true do |o|
+opts = Slop.parse do |o|
   o.banner = "Usage: cookery [options] file..."
 
   o.string '-c', '--config', "Config file.", default: 'config.toml'
@@ -194,12 +194,22 @@ opts = Slop.parse help: true do |o|
     end
     exit
   end
+  o.string '--get', "Get Cookery project." do |project_uri|
+    require 'git'
+
+    uri = project_uri.split('/')
+    name = File.basename(uri.last, '.git')
+
+    Git.clone("https://" + uri.join('/'), name)
+  end
   o.bool '--print_options', "Print options and exit."
   o.on '-h', '--help' do
     puts o
     exit
   end
 end
+
+p opts.used_options
 
 require 'colored'
 require 'citrus'
@@ -212,6 +222,7 @@ require 'dsl_elements'
 require 'action'
 require 'subject'
 require 'condition'
+require 'protocol'
 
 options = opts.to_hash
 input_files = opts.arguments
