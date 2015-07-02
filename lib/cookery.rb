@@ -1,4 +1,18 @@
 require 'slop'
+require 'colored'
+require 'citrus'
+require 'toml'
+require 'active_support/all'
+$:.unshift File.join(File.dirname(__FILE__))
+$:.unshift File.join(File.dirname(__FILE__), 'cookery')
+require 'grammar_extensions'
+require 'helpers'
+require 'operation'
+require 'dsl_elements'
+require 'action'
+require 'subject'
+require 'condition'
+require 'protocol'
 
 class Cookery
   @@modules = []
@@ -10,11 +24,24 @@ class Cookery
 
   def initialize(config = {})
     @config = config
+
     if !@config.include? :actions
       @config[:actions] = {}
     else
       @config[:actions].deep_symbolize_keys!
     end
+
+    (Dir.glob(File.join(File.dirname(__FILE__), 'stdlib', '**', '*.rb')).
+      map { |f| File.absolute_path(f) } +
+     (@config[:libraries] || [])).each do |l|
+      if File.exist? l
+        puts "Loading implementation file: #{l}".black_on_green
+        require l
+      else
+        puts "No implementation file: #{l}".black_on_magenta
+      end
+    end
+
     Citrus.require config[:grammar_file] || 'cookery'
   end
 
@@ -116,40 +143,10 @@ class Cookery
   def evaluate(result)
     @@modules.inject(result) { |memo, m| m.evaluate(memo) }
   end
-end
 
-module ActivityStatement
-  def value
-    a = Activity.new
-    add_node(a)
-    closure = ->(i) { capture(:var) ? "(define #{capture(:var).value} #{i})": i}
-
-    closure.call "(" +
-                 [(capture(:action_group) ?
-                     capture(:action_group).value : nil),
-                  (capture(:subject_or_variable) ?
-                     capture(:subject_or_variable).value : nil),
-                  (capture(:condition_group) ?
-                     capture(:condition_group).value : nil)
-                 ].reject(&:nil?).join(" ") +
-                 ")"
-  end
-end
-
-module SubjectOrVariable
-  def value
-    more = captures[:subject_or_variable][1..-1].map(&:value)
-
-    if capture(:subject_list)
-      [capture(:subject_list).value, more].reject(&:empty?).join(' ')
-    elsif capture(:subject_group)
-      [capture(:subject_group).value, more].reject(&:empty?).join(' ')
-    end
-  end
-end
-
-empty_project = {}
-empty_project['.rb'] = <<SOURCE
+  def self.run_toolkit
+    empty_project = {}
+    empty_project['.rb'] = <<SOURCE
 action("test", :out) do |data|
   puts "Just a test, passing data from subject"
   data
@@ -160,103 +157,90 @@ subject("Test", nil, "test") do
 end
 SOURCE
 
-empty_project['.cookery'] = <<SOURCE
+    empty_project['.cookery'] = <<SOURCE
 test Test.
 SOURCE
 
-empty_project['.toml'] = <<SOURCE
+    empty_project['.toml'] = <<SOURCE
 [actions]
     [actions.test]
     just_an_example = true
 SOURCE
 
-opts = Slop.parse do |o|
-  o.banner = "Usage: cookery [options] file..."
+    opts = Slop.parse do |o|
+      o.banner = "Usage: cookery [options] file..."
 
-  o.string '-c', '--config', "Config file.", default: 'config.toml'
-  o.string '--grammar_file', "Grammar file."
-  o.string '-e', '--eval', "Evaluate expression."
-  o.string '-n', '--new', "New Cookery project." do |project_path|
-    empty_project.keys.each do |ext|
-      if !Dir.exists?(project_path)
-        Dir.mkdir(project_path)
-      end
+      o.string '-c', '--config', "Config file.", default: 'config.toml'
+      o.string '--grammar_file', "Grammar file."
+      o.string '-e', '--eval', "Evaluate expression."
+      o.string '-n', '--new', "New Cookery project." do |project_path|
+        empty_project.keys.each do |ext|
+          if !Dir.exists?(project_path)
+            Dir.mkdir(project_path)
+          end
 
-      project_name = File.basename(project_path)
+          project_name = File.basename(project_path)
 
-      if File.exists?(File.join(project_path, project_name + ext))
-        warn "File #{project_name + ext} exists"
-      else
-        File.open(File.join(project_path, project_name + ext), 'w+') do |f|
-          f.write empty_project[ext]
+          if File.exists?(File.join(project_path, project_name + ext))
+            warn "File #{project_name + ext} exists"
+          else
+            File.open(File.join(project_path, project_name + ext), 'w+') do |f|
+              f.write empty_project[ext]
+            end
+          end
         end
+        exit
+      end
+      o.string '--get', "Get Cookery project." do |project_uri|
+        require 'git'
+
+        uri = project_uri.split('/')
+        name = File.basename(uri.last, '.git')
+
+        Git.clone("https://" + uri.join('/'), name)
+      end
+      o.bool '--print_options', "Print options and exit."
+      o.on '-h', '--help' do
+        puts o
+        exit
       end
     end
-    exit
-  end
-  o.string '--get', "Get Cookery project." do |project_uri|
-    require 'git'
 
-    uri = project_uri.split('/')
-    name = File.basename(uri.last, '.git')
+    options = opts.to_hash
+    input_files = opts.arguments
+    config = {}
+    if File.exists? options[:config]
+      config = TOML.load_file(options[:config])
+      # symbolize keys
+      config.keys.each do |key|
+        config[(key.to_sym rescue key) || key] = config.delete(key)
+      end
+      # replace options from config with options from command line
+      config.
+        merge!(options.to_h) { |key, v1, v2| v2 ? v2 : v1 }.
+        reject! { |key, value| value.nil? }
+    else
+      warn "Configuration file not found."
+    end
 
-    Git.clone("https://" + uri.join('/'), name)
-  end
-  o.bool '--print_options', "Print options and exit."
-  o.on '-h', '--help' do
-    puts o
-    exit
+    if options[:print_options]
+      puts "Options:"
+      config.each do |k, v|
+        puts " #{k}: #{v ? v : 'NO'}"
+      end
+      exit
+    end
+
+    cookery = Cookery.new(config)
+
+    if options[:eval] and !input_files.empty?
+      puts "Evaluating string, the following input files are ignored:"
+      puts input_files.join(", ")
+    end
+
+    result = options[:eval] ?
+               cookery.process_string(options[:eval]) :
+               cookery.process_files(input_files.uniq)
+    puts "Final STATE: ".black_on_green + " #{result} ".black_on_magenta
   end
 end
-
-p opts.used_options
-
-require 'colored'
-require 'citrus'
-require 'toml'
-require 'active_support/all'
-$:.unshift File.join(File.dirname(__FILE__), 'cookery')
-require 'helpers'
-require 'operation'
-require 'dsl_elements'
-require 'action'
-require 'subject'
-require 'condition'
-require 'protocol'
-
-options = opts.to_hash
-input_files = opts.arguments
-config = {}
-if File.exists? options[:config]
-  config = TOML.load_file(options[:config])
-  # symbolize keys
-  config.keys.each do |key|
-    config[(key.to_sym rescue key) || key] = config.delete(key)
-  end
-  # replace options from config with options from command line
-  config.
-    merge!(options.to_h) { |key, v1, v2| v2 ? v2 : v1 }.
-    reject! { |key, value| value.nil? }
-else
-  warn "Configuration file not found."
-end
-
-if options[:print_options]
-  puts "Options:"
-  config.each do |k, v|
-    puts " #{k}: #{v ? v : 'NO'}"
-  end
-  exit
-end
-
-cookery = Cookery.new(config)
-
-if options[:eval] and !input_files.empty?
-    puts "Evaluating string, the following input files are ignored:"
-    puts input_files.join(", ")
-end
-
-result = options[:eval] ?
-           cookery.process_string(options[:eval]) :
-           cookery.process_files(input_files.uniq)
-puts "Final STATE: ".black_on_green + " #{result} ".black_on_magenta

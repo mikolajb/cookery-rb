@@ -37,3 +37,6 @@ DEPENDENCIES
   rest-client
   slop (~> 4.0.0)
   toml
+
+BUNDLED WITH
+   1.10.4

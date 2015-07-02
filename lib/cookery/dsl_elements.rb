@@ -99,6 +99,12 @@ class Activity
     end
 
     action_impl = Actions[@action.params[:name]]
+
+    if action_impl.nil?
+      warn "No action implementation: #{@action.params[:name]}".red
+      exit
+    end
+
     action_impl.config = c_module.config[:actions][@action.params[:name].to_sym]
 
     if @list_variable
